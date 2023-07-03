@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 project(t_cose
     DESCRIPTION "t_cose"
     LANGUAGES C
@@ -8,9 +8,9 @@ project(t_cose
 set(CRYPTO_PROVIDERS "OpenSSL" "MbedTLS" "Test")
 
 # Project options
-set(CRYPTO_PROVIDER "OpenSSL" CACHE STRING "The crypto provider to use: ${CRYPTO_PROVIDERS}")
-set(BUILD_TESTS ON CACHE BOOL "Build tests")
-set(BUILD_EXAMPLES ON CACHE BOOL "Build examples")
+option(CRYPTO_PROVIDER "The crypto provider to use: ${CRYPTO_PROVIDERS}" "OpenSSL")
+option(BUILD_TESTS "Build tests" ON)
+option(BUILD_EXAMPLES "Build examples" ON)
 
 if (NOT CRYPTO_PROVIDER IN_LIST CRYPTO_PROVIDERS)
     message(FATAL_ERROR "CRYPTO_PROVIDER must be one of ${CRYPTO_PROVIDERS}")
@@ -34,14 +34,14 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 if(CRYPTO_PROVIDER STREQUAL "MbedTLS")
 
     find_package(MbedTLS REQUIRED)
-    set(CRYPTO_LIBRARY MbedTLS::MbedCrypto)
+    option(CRYPTO_LIBRARY "Crypto Library Identifier" "MbedTLS::MbedCrypto")
     set(CRYPTO_COMPILE_DEFS -DT_COSE_USE_PSA_CRYPTO=1 ${CC_DEFINES})
     set(CRYPTO_ADAPTER_SRC crypto_adapters/t_cose_psa_crypto.c)
 
 elseif(CRYPTO_PROVIDER STREQUAL "OpenSSL")
 
     find_package(OpenSSL REQUIRED)
-    set(CRYPTO_LIBRARY OpenSSL::Crypto)
+    option(CRYPTO_LIBRARY "Crypto Library Identifier" "OpenSSL::Crypto")
     set(CRYPTO_COMPILE_DEFS -DT_COSE_USE_OPENSSL_CRYPTO=1 -DT_COSE_DISABLE_HPKE)
     set(CRYPTO_ADAPTER_SRC crypto_adapters/t_cose_openssl_crypto.c)
 
@@ -50,7 +50,7 @@ elseif(CRYPTO_PROVIDER STREQUAL "Test")
     add_library(b_con_hash crypto_adapters/b_con_hash/sha256.c)
     target_include_directories(b_con_hash PUBLIC crypto_adapters/b_con_hash)
 
-    set(CRYPTO_LIBRARY b_con_hash)
+    option(CRYPTO_LIBRARY "Crypto Library Identifier" "b_con_hash")
     set(CRYPTO_COMPILE_DEFS -DT_COSE_USE_B_CON_SHA256 -DT_COSE_ENABLE_HASH_FAIL_TEST -DT_COSE_DISABLE_HPKE)
     set(CRYPTO_ADAPTER_SRC crypto_adapters/t_cose_test_crypto.c)
 
@@ -85,12 +85,13 @@ set(T_COSE_SRC_COMMON
 )
 
 find_package(QCBOR REQUIRED)
+option(QCBOR_LIBRARY "QCBOR Library Identifier" "QCBOR::QCBOR")
 
 add_library(t_cose ${T_COSE_SRC_COMMON} ${CRYPTO_ADAPTER_SRC})
 target_compile_options(t_cose PRIVATE -ffunction-sections)
 target_compile_definitions(t_cose PRIVATE ${CRYPTO_COMPILE_DEFS})
 target_include_directories(t_cose PUBLIC inc PRIVATE src)
-target_link_libraries(t_cose PUBLIC QCBOR::QCBOR PRIVATE ${CRYPTO_LIBRARY})
+target_link_libraries(t_cose PUBLIC ${QCBOR_LIBRARY} PRIVATE ${CRYPTO_LIBRARY})
 
 include(GNUInstallDirs)
 
